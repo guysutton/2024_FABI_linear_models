@@ -1,0 +1,644 @@
+---
+title: "Session #3: Count Models"
+author: "Guy F. Sutton"
+institute: "Centre for Biological Control<br>Rhodes University, South Africa<Br>Email: g.sutton@ru.ac.za"
+format: revealjs
+editor: source
+---
+  
+### Gaussian data is rare 
+  
+```{r}
+#| echo: false
+#| eval: true
+
+################
+# Session setup 
+################
+
+# Use package manager to check, install and load required packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(
+  # List the packages you need below
+  tidyverse,
+  glmmTMB,
+  DHARMa
+)
+
+# Change ggplot theme
+theme_set(
+  theme_classic() +
+    theme(
+      panel.border = element_rect(colour = "black",
+                                  fill = NA),
+      axis.text = element_text(colour = "black"),
+      axis.title.x = element_text(margin = unit(c(2, 0, 0, 0),
+                                                "mm")),
+      axis.title.y = element_text(margin = unit(c(0, 4, 0, 0),
+                                                "mm")),
+      legend.position = "none"
+    )
+)
+```
+
+::: {.incremental}
+::: {style="font-size: 0.70em"}
+
+- The analyses so far have assumed that we are dealing with normal (Gaussian) distributed data that can be measured as whole numbers with decimal places (e.g. height, weight, diameter).
++ However, most data in the real world either do not conform to the normal distribution, or they cannot be measured as numbers with decimal places, and can't be analysed with Gaussian models.
+  + For example:
+    + Counts (e.g. species abundances, days till an event) which are measured as integers (cannot take a decimal place), 
+    + Binary data (e.g. dead/alive, 1/0, present/absent),
+    + Proportion data (e.g. proportion survival, anything measured on a scale of [0,1])
+  
+- But, GLM's can easily be extended to fitting count models and proportion/binary data 
+
+:::
+:::
+  
+--- 
+  
+### Count data 
+  
+::: {.incremental}
+::: {style="font-size: 0.85em"}
+- Count data is ubiquitous in ecology.
+  + e.g. No. of FCM per fruit
+  + e.g. No. of ticks per zebra
+  + e.g. Abundances of impala per hectare in the Kruger National Park
+
+- Counts (or abundances) are defined as non-negative integers
+  + I.e. They cannot take a decimal place
+  + e.g. 0 FCM per fruit, 7 ticks on a zebra, 385 impala per hectare
+    + NOT: 33.15 psyllids per leaf 
+    + ALSO NOT: 27% of the flies dead
+
+:::
+:::
+  
+---
+  
+### Counts are not normal (literally)
+  
+::: {.incremental}
+::: {style="font-size: 0.75em"}
+
+- Counts typically do not conform to assumptions of normality for statistical tests
++ Count data typically follows a strong mean-variance relationship 
++ In many count datasets, there are many zeros and small counts, and successively fewer larger counts
+
+:::
+:::
+  
+. . . 
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-width: 10
+#| fig-height: 4
+
+# Simulate normal data across groups for visual comparison on next slides 
+set.seed(2021)             
+data_normal <- data.frame(Y = rnorm(n = 200, mean = 6, sd = 2),
+                          citrus_var = rep(LETTERS[1:20], each = 10)) %>%
+  dplyr::mutate(Y = round(Y, digits = 0))
+
+# Simulate Poisson data across groups 
+set.seed(2021)             
+data <- data.frame(Y = rnbinom(n = 200, mu = 4, size = 5),
+                   citrus_var = rep(LETTERS[1:20], each = 10))
+
+# Show how counts usually have many zeroes and small numbers 
+count_plot <- ggplot(data = data, aes(x = Y)) +
+  geom_bar() +
+  labs(x = "No. of larvae (per tree)",
+       y = "Frequency",
+       subtitle = "(b) What counts usually look like") +
+  scale_x_continuous(breaks = seq(0, 15, 1),
+                     limits = c(-1, 15))
+
+# What would we expect if the data were normally distributed? 
+normal_plot <- ggplot(data = data_normal, aes(x = Y)) +
+  geom_bar() +
+  labs(x = "No. of larvae (per tree)",
+       y = "Frequency",
+       subtitle = "(a) Expected under normal distribution") +
+  scale_x_continuous(breaks = seq(0, 15, 1),
+                     limits = c(-1, 15))
+
+# Put the two plots together 
+cowplot::plot_grid(
+  normal_plot,
+  count_plot,
+  ncol = 2
+)
+```
+
+---
+
+### Count models 
+
+::: {.incremental}
+::: {style="font-size: 0.75em"}
+- There are two basic options for modelling count data:
+  1. [Poisson GLM]{style="color:#FF0000"} - The Poisson distribution assumes the mean = variance.
+  2. [Negative binomial GLM]{style="color:#0000FF"} - The NB distribution assumes the variance > mean
+:::
+:::
+
+. . . 
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-width: 10
+#| fig-height: 4
+
+# Simulate negative binomial and Poisson data across groups 
+set.seed(2021)             
+data <- data.frame(
+  Y_neg_bin = rnbinom(n = 200, mu = 4, size = 5),
+  Y_pois = rpois(n = 200, lambda = 4),
+  citrus_var = rnorm(n = 200, mean = 10)) %>%
+  dplyr::arrange(citrus_var)
+
+# Plot to visualise the differences 
+poisson_plot <- ggplot() +
+  geom_bar(data = data, aes(x = Y_pois),
+            fill = "red") +
+  scale_y_continuous(breaks = seq(0, 50, 10),
+                     limits = c(0, 50)) + 
+  scale_x_continuous(breaks = seq(0, 20, 4),
+                     limits = c(0, 20)) + 
+  labs(x = "No. of larvae (per tree)",
+       y = "Frequency",
+       subtitle = "(a) Poisson - mean = variance")
+
+neg_bin_plot <- ggplot() +
+  geom_bar(data = data, aes(x = Y_neg_bin),
+            fill = "blue") +
+  scale_y_continuous(breaks = seq(0, 50, 10),
+                     limits = c(0, 50)) + 
+  scale_x_continuous(breaks = seq(0, 20, 4),
+                     limits = c(0, 20)) + 
+  labs(x = "No. of larvae (per tree)",
+       y = "Frequency",
+       subtitle = "(b) Negative binomial - mean < variance")
+
+# Put the two plots together 
+cowplot::plot_grid(
+  poisson_plot,
+  neg_bin_plot,
+  ncol = 2
+)
+```
+  
+---
+
+### Count models in `R` 
+
+::: {style="font-size: 0.75em"}
+
+- Assuming our question is: *Does Y vary based on X?*
+- We model the log of the expected mean count of `Y` as a function of `X`
+
+
+- *Poisson GLM*:
+
+`mod_poisson <- glmmTMB::glmmTMB(data = data, family = poisson(link = "log"), Y ~ X)` 
+
+
+- *Negative binomial GLM*:
+
+`mod_nb <- glmmTMB::glmmTMB(data = data, family = nbinom2(link = "log"), Y ~ X)`
+
+:::
+
+---
+
+### An example 
+
+::: {.incremental}
+::: {style="font-size: 0.75em"}
+- I have simulated some data representing 100 trees that have been measured (`tree_diam`), and a count of the number of larvae recorded (`no_larvae`). 
+  + We want to know whether there is a relationship between `tree_diam` and `no_larvae`? 
+  + I have simulated the data so that:
+    + The expected `no_larvae` when `tree_diam` = 0 is 2.71 larvae. Obviously nonsense, but keep this value in mind for later. 
+    + The `no_larvae` recorded increases by a factor of 7 per 1cm increase in `tree_diam` 
+:::
+:::
+
+```{r}
+set.seed(2012)
+#sample size
+n <- 100
+#regression coefficients
+beta0 <- 1
+beta1 <- 2
+#generate covariate values
+tree_diam <- runif(n=n, min=0, max=3)
+#compute mu's
+mu <- exp(beta0 + beta1 * tree_diam)
+#generate Y-values
+no_larvae <- rpois(n=n, lambda=mu)
+#data set
+data <- data.frame(tree_diam, no_larvae)
+```
+
+---
+
+### Visualise relationship 
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-width: 8
+#| fig-height: 4
+
+data %>% 
+  ggplot(data = ., aes(x = tree_diam, y = no_larvae)) +
+  geom_point() +
+  labs(
+    x = "Tree diameter (cm)",
+    y = "No. of larvae"
+  )
+```
+
+---
+
+### A Gaussian model 
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Fit Gaussian model 
+m_g <- glmmTMB::glmmTMB(
+  data = data,
+  family = gaussian(link = "identity"),
+  no_larvae ~ 1 + tree_diam
+)
+```
+
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-width: 8
+#| fig-height: 4
+#| fig-align: center
+
+preds <- ggeffects::ggeffect(
+  model = m_g,
+  terms = c("tree_diam [0:3 by = 0.1]"),
+  interval = "confidence",
+  type = "fixed"
+  ) %>%
+  as.data.frame()
+
+preds %>% 
+  ggplot(data = ., aes(x = x, y = predicted)) +
+  geom_line(colour = "red", linetype = "dashed") +
+  labs(
+    x = "Tree diameter (cm)",
+    y = "No. of larvae"
+  ) +
+  geom_point(data = data, aes(x = tree_diam, y = no_larvae))
+```
+
+---
+
+### Check model diagnostics - Gaussian model 
+
+```{r}
+#| echo: true
+#| eval: true
+#| output: false
+
+# Check residuals
+sim_out <- DHARMa::simulateResiduals(fittedModel = m_g, plot = T)
+```
+
+```{r}
+#| fig-align: center
+
+plot(sim_out)
+```
+
+---
+
+### Fit Poisson model 
+
+- Here, we model the expected mean number of larvae (`no_larvae`) as a function of `tree_diam`
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Fit Poisson model 
+m_p <- glmmTMB::glmmTMB(
+  data = data,
+  family = poisson(link = "log"),
+  no_larvae ~ 1 + tree_diam
+)
+```
+
+---
+
+### Plot Poisson prediction
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-width: 8
+#| fig-height: 4
+#| fig-align: center
+
+preds <- ggeffects::ggeffect(
+  model = m_p,
+  terms = c("tree_diam [0:3 by = 0.1]"),
+  interval = "confidence",
+  type = "fixed"
+  ) %>%
+  as.data.frame()
+
+preds %>% 
+  ggplot(data = ., aes(x = x, y = predicted)) +
+  geom_line(colour = "red", linetype = "dashed") +
+  labs(
+    x = "Tree diameter (cm)",
+    y = "No. of larvae"
+  ) +
+  geom_point(data = data, aes(x = tree_diam, y = no_larvae))
+```
+
+---
+
+### Check model diagnostics - Poisson model 
+
+```{r}
+#| echo: true
+#| eval: true
+#| output: false
+
+# Check residuals
+sim_out <- DHARMa::simulateResiduals(fittedModel = m_p, plot = T)
+```
+
+```{r}
+#| fig-align: center
+
+plot(sim_out)
+```
+
+---
+
+### Likelihood Ratio Test 
+
+Test the hypothesis of a `tree_diam` effect on the `no_larvae`
+
+```{r}
+
+# Fit null model 
+m_null <- glmmTMB::glmmTMB(
+  data = data,
+  family = poisson(link = "log"),
+  no_larvae ~ 1
+)
+
+# Perform LRT 
+lmtest::lrtest(m_null, m_p)
+```
+
+There is support for a statistically significant relationship between `tree_diam` and the `no_larvae` counter per tree (X2 = 33991, df = 1, *P* < 0.001). 
+
+---
+
+### Interpret coefficients 
+
+::: {style="font-size: 0.80em"}
+
+```{r}
+#| echo: true
+#| eval: true
+
+summary(m_p)
+```
+
+
+::: {.incremental}
+
+- (Intercept) = 1.0136
+  + Always have to exponentiate (`exp(value)`) to get interpretable coefficients
+  + `exp(1.0136)` = 2.74
+  + The expected `no_larvae` when `tree_diam` = 0 is 2.74 larvae. 
+  
+:::
+:::
+
+---
+
+### Interpret coefficients 
+
+::: {style="font-size: 0.80em"}
+
+```{r}
+#| echo: true
+#| eval: true
+
+summary(m_p)
+```
+
+
+::: {.incremental}
+
+- Beta `tree_diam` = 1.998
+  + Always have to exponentiate (`exp(value)`) to get interpretable coefficients
+  + `exp(1.998)` = 7.31
+  + The `no_larvae` recorded increases by a factor of 7.31 per 1cm increase in `tree_diam`, on average
+  
+:::
+:::
+
+---
+
+## Extracting marginal means 
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Extract expected relationship between X and Y
+preds <- ggeffects::ggeffect(
+  model = m_p,
+  terms = c("tree_diam [0:3 by = 0.1]"),
+  type = "fixed", 
+  interval = "confidence"
+  ) %>%
+  # Convert predictions into a data.frame
+  as.data.frame() %>% 
+  # Rename columns for easier plotting
+  dplyr::mutate(
+    tree_diam = x
+  )
+```
+
+---
+
+## Plot marginal effect plot 
+
+::: {.panel-tabset}
+
+## Plot
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: center
+
+# Plot marginal effect plot 
+preds %>%
+  ggplot(data = ., aes(x = tree_diam, y = predicted)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) + 
+  geom_line() +
+  geom_point(data = data, aes(x = tree_diam, y = no_larvae), alpha = 0.5) +
+  scale_y_continuous(
+    limits = c(0, 1500, 250)
+  ) +
+   # Add axis labels 
+  labs(
+    x = "Tree diameter (cm)",
+    y = "No. of larvae"
+  ) 
+```
+
+## Code
+
+```{r}
+#| echo: true
+#| eval: false
+
+# Plot marginal effect plot 
+preds %>%
+  ggplot(data = ., aes(x = tree_diam, y = predicted)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) + 
+  geom_line() +
+  geom_point(data = data, aes(x = tree_diam, y = no_larvae), alpha = 0.5) +
+  scale_y_continuous(
+    limits = c(0, 1500, 250)
+  ) +
+   # Add axis labels 
+  labs(
+    x = "Tree diameter (cm)",
+    y = "No. of larvae"
+  ) 
+```
+
+:::
+
+---
+
+### Fit negative binomial model 
+
+- Here, we model the expected mean number of larvae (`no_larvae`) as a function of `tree_diam`
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Fit NB model 
+m_nb <- glmmTMB::glmmTMB(
+  data = data,
+  family = nbinom2(link = "log"),
+  no_larvae ~ 1 + tree_diam
+)
+```
+
+---
+
+### Is Poisson or NB better for me? 
+
+The typical approach is to fit both Poisson and NB models, compare fits, and then perform inference (if at least one of these models is suitable).
+
+We can compare the two models using a **Wald Test**: 
+
+```{r}
+#| echo: true
+#| eval: true
+
+anova(m_p, m_nb)
+```
+
+---
+
+### Compare Poisson vs NB using Wald Test
+
+We can compare the two models using a **Wald Test**: 
+
+```{r}
+#| echo: true
+#| eval: true
+
+anova(m_p, m_nb)
+```
+
+There is no evidence that the negative binomial model provided a better fit to the data than the Poisson model (X2 = 0.0001, df = 1, *P* = 0.993). As such, you use the simpler Poisson model (assuming the model diagnostics are suitable).
+
+---
+
+### Why not take the log? 
+
+In the above models, we are modelling the log of the expected counts. So, why not just take the log of the response variable? 
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Fit log-linear model 
+m_l <- glmmTMB::glmmTMB(
+  data = data,
+  family = gaussian(link = "identity"),
+  log(no_larvae + 1) ~ 1 + tree_diam
+)
+```
+
+---
+
+### It's all about variances 
+
+::: {style="font-size: 0.80em"}
+
+This will not work, as the log-linear model assumes variance is proportional to squared expected values, while the poisson/NB assume variance is equal or greater than the expected mean. 
+
+As such, log-linear model will underestimate the expected counts. 
+
+:::
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-width: 8
+#| fig-height: 4
+#| fig-align: center
+
+preds <- ggeffects::ggeffect(
+  model = m_l,
+  terms = c("tree_diam [0:3 by = 0.1]"),
+  interval = "confidence",
+  type = "fixed",
+  back.transform = T
+  ) %>%
+  as.data.frame()
+
+preds %>% 
+  ggplot(data = ., aes(x = x, y = predicted)) +
+  geom_line(colour = "red", linetype = "dashed") +
+  labs(
+    x = "Tree diameter (cm)",
+    y = "No. of larvae"
+  ) +
+  geom_point(data = data, aes(x = tree_diam, y = no_larvae))
+```
+
+

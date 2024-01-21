@@ -1,0 +1,434 @@
+---
+title: "Session #2: Additive vs Multiplicative Models"
+author: "Guy F. Sutton"
+institute: "Centre for Biological Control<br>Rhodes University, South Africa<Br>Email: g.sutton@ru.ac.za"
+format: revealjs
+editor: source
+---
+
+```{r session_setup}
+#| echo: false
+#| eval: true
+
+################
+# Session setup 
+################
+
+# Use package manager to check, install and load required packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(
+  # List the packages you need below
+  tidyverse,
+  equatiomatic,
+  lme4,
+  DHARMa
+)
+
+# Change ggplot theme
+theme_set(
+  theme_classic() +
+    theme(
+      panel.border = element_rect(colour = "black",
+                                  fill = NA),
+      axis.text = element_text(colour = "black"),
+      axis.title.x = element_text(margin = unit(c(2, 0, 0, 0),
+                                                "mm")),
+      axis.title.y = element_text(margin = unit(c(0, 4, 0, 0),
+                                                "mm")),
+      legend.position = "none"
+    )
+)
+```
+
+---
+      
+## Additive vs multiplicative models 
+      
+::: {.incremental}
+- So far, we have only looked at linear models with a single predictor (`X`) variable. 
+  + However, we can include two or more variables into our models
+  + When we do this, we can fit these models as *additive* or *multiplicative* models
+    + They make different assumptions and test different hypotheses
+    + Need to be very sure we know which model we want 
+
+:::
+      
+---
+
+## An extended example 
+
+::: {style="font-size: 0.65em"}
+Let's reconsider the `femurLength` and `bodyMass` example, and assume we reared half the insects on stock plants (`Control`) and the other half on nitrogen-enriched plants (`Nitrogen`) (hereafter `treatment`)
+:::
+
+```{r}
+
+#####################################
+# Simulate data to fit a linear model
+#####################################
+
+# Set reproducible seed 
+set.seed(1234)
+
+# Generate simulated data (continuous x variable)
+df_1 <- tibble(
+  x1 = rnorm(n = 100, mean = 20, sd = 5),
+  x2 = "Control", 
+  error = rnorm(n = 100, mean = 0, sd = 5),
+  y = 100 + (3 * x1) + error
+  ) %>%
+  dplyr::select(
+    femurLength = x1, 
+    treatment = x2, 
+    bodyMass = y
+  )
+
+# Generate simulated data (continuous x variable)
+df_2 <- tibble(
+  x1 = rnorm(n = 100, mean = 20, sd = 5),
+  x2 = "Nitrogen", 
+  error = rnorm(n = 100, mean = 0, sd = 5),
+  y = 60 + (5 * x1) + error
+  ) %>%
+  dplyr::select(
+    femurLength = x1, 
+    treatment = x2, 
+    bodyMass = y
+  )
+
+# Combine data
+df <- dplyr::bind_rows(
+  df_1,
+  df_2
+)
+
+
+# Make plot
+df %>%
+  ggplot(data = ., aes(x = femurLength, 
+                       y = bodyMass,
+                       colour = treatment)) +
+  # Plot scatterplot
+  geom_point() +
+  geom_smooth(method = "lm") + 
+  # Add axis labels 
+  labs(
+    x = "Femur length (mm)",
+    y = "Body mass (mg)"
+  ) +
+  # Increase axis label text size
+  theme(axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20)) +
+  theme(
+    legend.position = c(0.1, 0.8)
+  )
+
+```
+
+---
+
+## Additive model - fitting 
+
+- Hypothesis: Is there a diet `treatment` effect on `bodyMass` after controlling for `femurLength`? 
+
+- Tests for a difference in means between `treatment` groups 
+
+. . . 
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Fit additive model 
+mod_add <- glm(
+  data = df,
+  family = gaussian(link = "identity"),
+  bodyMass ~ 1 + femurLength + treatment
+)
+```
+
+---
+
+## Additive model - LRT
+
+```{r}
+# Likelihood ratio test 
+car::Anova(mod_add, test = "LR", type = "II")
+```
+
+There is no statistical support for a difference in `bodyMass` between insects reared on stock plants versus nitrogen-enriched plants (X2 = 0.04, df = 1, *P* = 0.846). 
+
+---
+
+## Additive model - beta 
+
+```{r}
+# Interpret coefficients 
+summary(mod_add)
+```
+
+::: {.incremental}
+
+- (Intercept) = 81.65
+  + Population mean `bodyMass` when `femurLength` = 0 (averaged across treatments)
+  
+:::
+
+---
+
+## Additive model - beta 
+
+```{r}
+# Interpret coefficients 
+summary(mod_add)
+```
+
+::: {.incremental}
+
+- Beta `femurLength` = 3.96
+  + As `femurLength` in the `Control` treatment increases by 1mm, `bodyMass` increases by 3.96mg
+  
+:::
+
+---
+
+
+## Additive model - beta 
+
+```{r}
+# Interpret coefficients 
+summary(mod_add)
+```
+
+::: {.incremental}
+
+- Beta `treatmentNitrogen` = -0.20
+  + As `femurLength` increases by 1mm, `bodyMass` increases by 0.20mg less, on average, than for a 1mm increase in the `Control` treatment 
+  
+:::
+
+---
+
+## Multiplicative model - fitting 
+
+- Hypothesis: Is the relationship between `bodyMass` and `femurLength` comparable between stock and nitrogen-enriched plants (`treatment`)? 
+
+- Tests for a difference in slopes between `treatment` groups 
+
+- This is often called and *interaction term model* or *slopes model* 
+
+. . . 
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Fit multiplicative model 
+mod_mlt <- glm(
+  data = df,
+  family = gaussian(link = "identity"),
+  bodyMass ~ 1 + femurLength + treatment + femurLength:treatment 
+)
+```
+
+---
+
+## Multiplicative - LRT
+
+```{r}
+# Likelihood ratio test 
+car::Anova(mod_mlt, test = "LR", type = "II")
+```
+
+
+::: {.incremental}
+
+- The `femurLength:treatment` term indicates statistical support for an interactive/multiplicative effect of `femurLength` on `bodyMass` (X2 = 187.79, df = 1, *P* < 0.001). 
+  + I.e. The relationship between `femurLength` and `bodyMass` **depends on** whether the insect was reared on stock plants or nitrogen-enriched plants 
+  
+::: 
+
+---
+
+## Multiplicative model - intercept
+
+```{r}
+# Interpret coefficients 
+summary(mod_mlt)
+```
+
+::: {.incremental}
+::: {style="font-size: 0.85em"}
+
+- (Intercept) = 81.65
+  + Mean `bodyMass` when `femurLength` = 0 in the `Control` group
+
+:::
+:::
+
+---
+
+## Multiplicative model - beta 
+
+```{r}
+# Interpret coefficients 
+summary(mod_mlt)
+```
+
+::: {.incremental}
+::: {style="font-size: 0.85em"}
+
+- Beta `femurLength` = 2.97
+  + As `femurLength` in the `Control` treatment increases by 1mm, `bodyMass` increases by 2.97mg, on average
+
+:::
+:::
+
+---
+
+## Multiplicative model - beta 
+
+```{r}
+# Interpret coefficients 
+summary(mod_mlt)
+```
+
+::: {.incremental}
+::: {style="font-size: 0.85em"}
+
+- Beta `treatmentNitrogen` = -41.79
+  + Mean `bodyMass` when `femurLength` = 0 in the `Nitrogen` group is 41.79mg less than in the `Control` group
+
+:::
+:::
+
+---
+
+## Multiplicative model - beta 
+
+```{r}
+# Interpret coefficients 
+summary(mod_mlt)
+```
+
+::: {.incremental}
+::: {style="font-size: 0.85em"}
+
+- Beta `femurLength:treatmentNitrogen` = 2.07
+  + As `femurLength` increases by 1mm, `bodyMass` increases by 2.07mg more, on average, than for a 1mm increase in the `Control` treatment 
+
+:::
+:::
+
+---
+
+## Additive vs multiplicative  
+
+::: {style="font-size: 0.85em"}
+:::: {.columns}
+::: {.column width="50%"}
+
+1. [Additive model]{style="color:#0000FF"}: Tests for a difference in means between treatments 
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Fit additive model 
+mod_add <- glm(
+  data = df,
+  family = gaussian(link = "identity"),
+  bodyMass ~ 1 + femurLength + treatment
+)
+```
+
+```{r}
+#| echo: false
+#| eval: true
+
+# Plot hypothetical relationship for additive model
+nd <-
+  tidyr::crossing(femurLength = seq(0, 30, 0.1),
+                  treatment = unique(df$treatment))
+preds_add <- predict(mod_add, newdata = nd) %>%
+  as.data.frame() %>%
+  dplyr::rename(
+    bodyMass = 1
+  ) %>%
+  dplyr::bind_cols(., nd)
+
+preds_add %>%
+  ggplot(data = ., aes(x = femurLength, y = bodyMass, colour = treatment)) +
+  geom_line() +
+  scale_y_continuous(
+    limits = c(100, 200),
+    breaks = seq(100, 200, 20)
+  ) +
+  # Add axis labels 
+  labs(
+    x = "Femur length (mm)",
+    y = "Body mass (mg)",
+    colour = "Treatment"
+  ) +
+  theme(
+    legend.position = c(0.1, 0.8)
+  )
+```
+
+:::
+  
+::: {.column width="50%"}
+
+2. [Multiplicative model]{style="color:#FF0000"}: Tests for a difference in slopes between treatments  
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Fit multiplicative model
+mod_mlt <- glm(
+  data = df,
+  family = gaussian(link = "identity"),
+  bodyMass ~ 1 + femurLength + treatment + femurLength:treatment 
+)
+```
+
+```{r}
+#| echo: false
+#| eval: true
+
+# Plot hypothetical relationship for multiplicative model
+nd <-
+  tidyr::crossing(femurLength = seq(0, 30, 0.1),
+                  treatment = unique(df$treatment))
+preds_int <- predict(mod_mlt, newdata = nd, type = "response") %>%
+  as.data.frame() %>%
+  dplyr::rename(
+    bodyMass = 1
+  ) %>%
+  dplyr::bind_cols(., nd)
+
+preds_int %>%
+  ggplot(data = ., aes(x = femurLength, y = bodyMass, colour = treatment)) +
+  geom_line() +
+  scale_y_continuous(
+    limits = c(100, 200),
+    breaks = seq(100, 200, 20)
+  ) +
+  # Add axis labels 
+  labs(
+    x = "Femur length (mm)",
+    y = "Body mass (mg)",
+    colour = "Treatment"
+  ) +
+  theme(
+    legend.position = c(0.1, 0.8)
+  )
+```
+
+:::
+::::
+:::
+ 
+
+

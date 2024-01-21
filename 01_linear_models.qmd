@@ -1,0 +1,1123 @@
+---
+title: "Session #1: Linear Models"
+author: "Guy F. Sutton"
+institute: "Centre for Biological Control<br>Rhodes University, South Africa<Br>Email: g.sutton@ru.ac.za"
+format: revealjs
+editor: source
+---
+
+### Linear Models 
+
+```{r session_setup}
+#| echo: false
+#| eval: true
+
+################
+# Session setup 
+################
+
+# Use package manager to check, install and load required packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(
+  # List the packages you need below
+  tidyverse,
+  equatiomatic,
+  lme4,
+  DHARMa
+)
+
+# Change ggplot theme
+theme_set(
+  theme_classic() +
+    theme(
+      panel.border = element_rect(colour = "black",
+                                  fill = NA),
+      axis.text = element_text(colour = "black"),
+      axis.title.x = element_text(margin = unit(c(2, 0, 0, 0),
+                                                "mm")),
+      axis.title.y = element_text(margin = unit(c(0, 4, 0, 0),
+                                                "mm")),
+      legend.position = "none"
+    )
+)
+```
+
+```{r simulate_lsr_data}
+#| echo: false
+#| eval: true
+
+#####################################
+# Simulate data to fit a linear model
+#####################################
+
+# Set reproducible seed 
+set.seed(1234)
+
+# Generate simulated data (continuous x variable)
+df <- tibble(
+  x1 = rnorm(n = 100, mean = 20, sd = 5),
+  error = rnorm(n = 100, mean = 0, sd = 5),
+  y = 100 + (3 * x1) + error
+  ) %>%
+  dplyr::select(
+    femurLength = x1, 
+    bodyMass = y
+  )
+```
+
+::: {.incremental}
+
+- Aims of linear regression
+  + 1. Is there a relationship/correlation between `Y` and `X`?
+  + 2. Is there a difference in `Y` due to the values of `X`?
+  + 3. Can I use `X` to predict `Y`? 
+
+:::
+
+---
+
+### Linear regression basics 
+
+Is female femur length correlated with body size? 
+
+```{r plot_basic}
+#| echo: false
+#| eval: true
+#| fig-align: center
+
+# Make plot
+df %>%
+  ggplot(data = ., aes(x = femurLength, 
+                       y = bodyMass)) +
+  # Plot scatterplot
+  geom_point() +
+  # Add axis labels 
+  labs(
+    x = "Femur length (mm)",
+    y = "Body mass (mg)"
+  ) +
+  # Increase axis label text size
+  theme(axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+```
+
+---
+
+### Response variable
+
+::: {.incremental}
+- What is our response/dependent variable?
+  + The measure we are interested in predicting or explaining
+    + Body mass (`bodyMass`)
+    + Usually denoted by `y` or `Y` 
+
+:::
+
+---
+
+### Predictor variable 
+
+::: {.incremental}
+- What is our covariate/fixed effect/predictor variable? 
+  + The variable used to explain the variation/differences observed in the response variable 
+    + Femur length (`femurLength`)
+    + Usually denoted by `x`, `X`, or `Xn`
+:::
+
+--- 
+
+
+# {.center}
+
+:::{#title-slide .center}
+::: {style="font-size: 2.5em"}
+Model fitting
+:::
+:::
+
+---
+
+## Linear model formula 
+
+In `R`, we can fit a simple linear model using:
+
+`m1 <- glm(y ~ x, data = data)`
+
+::: {.incremental}
+::: {style="font-size: 0.90em"}
+- Where:
+  + `m1` is a object name where we store our model 
+  + `glm` is a built-in function to run a linear model 
+  + `data` is the name of the dataset containing our data 
+  + `y` is the column name in `data` containing our response variable 
+  + `x` is the column name in `data` containing our predictor variable 
+
+:::
+:::
+
+---
+
+### Insert data object name  
+
+The data is stored in an object called `df`
+
+```{r}
+#| echo: true
+#| eval: true
+head(df, 10)
+```
+
+. . . 
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "3"
+m1 <- glm(
+  y ~ x, 
+  data = df
+)
+```
+
+---
+
+### Insert response variable name   
+
+The response variable is stored in a column called `bodyMass`
+
+```{r}
+#| echo: true
+#| eval: true
+head(df, 10)
+```
+
+. . . 
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "2"
+m1 <- glm(
+  bodyMass ~ x, 
+  data = df
+)
+```
+
+---
+
+### Insert predictor variable name   
+
+The predictor variable is stored in a column called `femurLength`
+
+```{r}
+#| echo: true
+#| eval: true
+head(df, 10)
+```
+
+. . . 
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "2"
+m1 <- glm(
+  bodyMass ~ femurLength, 
+  data = df
+)
+```
+
+---
+
+### Research question    
+
+Simple linear regression modelling body mass as a linear function of femur length
+
+::: {.incremental}
+- *Research Q*: Is there a correlation between `femurLength` and `bodyMass`? 
+  + I.e. What is the relationship between `femurLength` and `bodyMass`?
+  + I.e. Do larger individuals weigh more? 
+
+::: 
+
+```{r}
+#| echo: true
+#| eval: true
+m1 <- glm(
+  bodyMass ~ femurLength, 
+  data = df
+)
+```
+
+. . . 
+
+```{r extract_lsr_equation}
+#| results: "asis"
+#| echo: false
+#| eval: false
+
+# Extract equation 
+equatiomatic::extract_eq(m1, intercept = "beta")
+```
+
+---
+
+### Model equation   
+
+Simple linear regression modelling body mass as a linear function of femur length
+
+```{r}
+#| echo: true
+#| eval: true
+m1 <- glm(
+  bodyMass ~ femurLength, 
+  data = df
+)
+```
+
+. . . 
+
+```{r}
+#| results: "asis"
+#| echo: false
+#| eval: false
+
+# Extract equation 
+equatiomatic::extract_eq(m1, intercept = "beta")
+```
+
+. . . 
+
+$$
+\operatorname{bodyMass} = \beta_{0} + \beta_{1}(\operatorname{femurLength}) + \epsilon
+$$
+
+---
+
+### Global intercept  
+
+$$
+\operatorname{bodyMass} = \beta_{0} + \beta_{1}(\operatorname{femurLength}) + \epsilon
+$$
+
+. . .
+
+::: {.incremental}
+
+- $\beta$~0~: Intercept 
+  + The expected value of Y (`bodyMass`) when X = 0 (`femurLength` = 0)
+:::
+
+---
+
+### Beta coefficient  
+
+$$
+\operatorname{bodyMass} = \beta_{0} + \beta_{1}(\operatorname{femurLength}) + \epsilon
+$$
+
+. . .
+
+::: {.incremental}
+
+- $\beta$~1~: Beta coefficient / slope coefficient  
+  + The expected change in Y (`bodyMass`) for every unit-change in X (`femurLength`)
+    + E.g. For every 1mm increase in `femurLength`, by how much does `bodyMass` change, on average? 
+:::
+
+---
+
+### Error term   
+
+$$
+\operatorname{bodyMass} = \beta_{0} + \beta_{1}(\operatorname{femurLength}) + \epsilon
+$$
+
+. . .
+
+::: {.incremental}
+
+- $\epsilon$: Error term 
+  + The difference between the actual Y-values (measured `bodyMass` values) and the expected value of Y based on the model we have fit
+  + This effectively tells us how much of the observed variation in `bodyMass` is **NOT** due to the linear effect of `femurLength`
+:::
+
+---
+
+### Model summary - intercept  
+
+::: {style="font-size: 0.80em"}
+```{r}
+#| echo: true
+#| eval: true
+m1 <- glm(bodyMass ~ femurLength, data = df)
+summary(m1)
+```
+:::
+
+. . . 
+
+::: {.incremental}
+::: {style="font-size: 0.80em"}
+- $\beta$~0~ = 100.70
+  + When `femurLength` = 0 mm, the expected `bodyMass` = 100.70mg
+    + Does this make sense? 
+:::
+:::
+
+---
+
+### Model summary - slope
+
+::: {style="font-size: 0.70em"}
+```{r}
+#| echo: true
+#| eval: true
+m1 <- glm(bodyMass ~ femurLength, data = df)
+summary(m1)
+```
+:::
+
+. . . 
+
+::: {.incremental}
+::: {style="font-size: 0.70em"}
+- $\beta$~1~ = 2.97
+  + The expected change in `bodyMass` for every 1-unit change in `femurLength`
+    + E.g. For every 1mm increase in `femurLength`, `bodyMass` increases by 2.97mg, on average 
+:::
+:::
+
+---
+
+# {.center}
+
+:::{#title-slide .center}
+::: {style="font-size: 2.5em"}
+Model diagnostics 
+:::
+:::
+
+---
+
+### Model diagnostics
+
+For our model and any inferences to be valid, we need to check that it meets a few assumptions:
+
+::: {.incremental}
+  1. `Linearity`: Linear relationship between Y (`bodyMass`) and X (`femurLength`)
+  2. `Independence`: Data points are independent (no connection or unaccounted for clustering of data)
+  3. `Normality`: Responses are normally distributed for each level in X
+  4. `Equal variance`: The variation in responses are equal for each level in X
+:::
+
+---
+
+### 1. Linearity 
+
+Looks like there is a linear relationship between `bodyLength` and `femurLength`.
+
+```{r plot_linearity}
+#| echo: false
+#| eval: true
+#| fig-align: center
+
+# Make plot
+df %>%
+  ggplot(data = ., aes(x = femurLength, 
+                       y = bodyMass)) +
+  # Plot scatterplot
+  geom_point() +
+  # Add axis labels 
+  labs(
+    x = "Femur length (mm)",
+    y = "Body mass (mg)"
+  ) +
+  # Increase axis label text size
+  theme(axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+```
+
+---
+
+### 1. Linearity 
+
+::: {style="font-size: 0.90em"}
+- Need to confirm that our model was specified correctly to capture this relationship
+  + Use a `residual vs fitted plot`
+  + Residuals should cluster around y = 0, no pattern evident 
+  
+:::
+
+```{r plot_resfit}
+#| echo: false
+#| eval: true
+#| fig-align: center
+
+# Make plot
+# - m1 is the object containing the fitted GLM 
+# - which = 1 tells R we want the residual vs fitted plot 
+plot(m1, which = 1)
+```
+
+---
+
+### 2. Independence 
+
+::: {.incremental}
+- Independence is almost impossible to diagnose with a plot or statistical test. 
+  + Independence is a property of the experimental design 
+  + Observations are not grouped or clustered, not more similar to each other in a systematic way 
+    
+:::
+
+---
+
+### 2. Independence 
+
+::: {style="font-size: 0.90em"}
+
+- Let's consider a study where we observe 40 male wasps and count how many females they mate with over a 10 minute period? 
+  + Do larger males attract more mates? 
+  
+::: 
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: center
+
+# Simulation adapted from 'proback' book 
+subject = c(rep(1,10),rep(2,10),rep(3,10),rep(4,10))
+lambda0 = c(rep(10,10),rep(20,10),rep(30,10),rep(40,10))
+lambda1 = rep(-0.5,40)
+previj = c(1:10,4:13,7:16,10:19)
+eij = rnorm(40,0,1)
+yij = lambda0 + lambda1*previj + eij
+simdata = data.frame(
+  subject = subject,
+  lambda0 = lambda0,
+  lambda1 = lambda1, 
+  x = previj, 
+  eij = eij, 
+  y = yij
+)
+
+# Plot 
+simdata %>%
+  ggplot(data = ., aes(x = x, y = y)) +
+  geom_point() +
+  # Add axis labels 
+  labs(
+    x = "Male body size (mm)",
+    y = "No. of female mates"
+  ) +
+  # Increase axis label text size
+  theme(axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+```
+
+---
+
+### 2. Independence 
+
+::: {style="font-size: 0.90em"}
+
+- If we correlate male body size with no. of mates, there is a clear positive relationship, right? 
+  
+::: 
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: center
+
+# Simulation adapted from 'proback' book 
+subject = c(rep(1,10),rep(2,10),rep(3,10),rep(4,10))
+lambda0 = c(rep(10,10),rep(20,10),rep(30,10),rep(40,10))
+lambda1 = rep(-0.5,40)
+previj = c(1:10,4:13,7:16,10:19)
+eij = rnorm(40,0,1)
+yij = lambda0 + lambda1*previj + eij
+simdata = data.frame(
+  subject = subject,
+  lambda0 = lambda0,
+  lambda1 = lambda1, 
+  x = previj, 
+  eij = eij, 
+  y = yij
+)
+
+# Plot 
+simdata %>%
+  ggplot(data = ., aes(x = x, y = y)) +
+  geom_point() +
+  # Add axis labels 
+  labs(
+    x = "Male body size (mm)",
+    y = "No. of female mates"
+  ) +
+  # Increase axis label text size
+  theme(axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20)) +
+  geom_smooth(
+    method = "lm"
+  )
+```
+
+---
+
+### 2. Independence 
+
+::: {style="font-size: 0.70em"}
+
+- If we consider that 10 males were sampled from each of 4 field sites, and account for this non-independence in our model, the relationship between male body size and number of mates is negative.
+  
+::: 
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: center
+
+# Simulation adapted from 'proback' book 
+subject = c(rep(1,10),rep(2,10),rep(3,10),rep(4,10))
+lambda0 = c(rep(10,10),rep(20,10),rep(30,10),rep(40,10))
+lambda1 = rep(-0.5,40)
+previj = c(1:10,4:13,7:16,10:19)
+eij = rnorm(40,0,1)
+yij = lambda0 + lambda1*previj + eij
+simdata = data.frame(
+  subject = subject,
+  lambda0 = lambda0,
+  lambda1 = lambda1, 
+  x = previj, 
+  eij = eij, 
+  y = yij
+)
+
+# Plot 
+simdata %>%
+  ggplot(data = ., aes(x = x, y = y, colour = as.factor(subject))) +
+  geom_point() +
+  scale_colour_manual(values = c("red", "blue", "yellow", "pink")) + 
+  # Add axis labels 
+  labs(
+    x = "Male body size (mm)",
+    y = "No. of female mates",
+    colour = "Site"
+  ) +
+  # Increase axis label text size
+  theme(axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20)) +
+  geom_smooth(
+    method = "lm",
+    aes(group = as.factor(subject))
+  ) +
+  theme(
+    legend.position = "right"
+  )
+```
+
+---
+
+### 3. Normality 
+
+::: {style="font-size: 0.80em"}
+- Need to confirm that our responses are normally distributed for each level of `X`
+  + Use a `Quantile-quantile (QQ) plot`
+  + Residuals should cluster around slope = 1 curve, no pattern evident 
+  
+:::
+
+. . . 
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: center
+#| fig-height: 4
+
+# Fitted model is stored in `m1`
+
+# Extract fitted and residual values 
+res <- DHARMa::simulateResiduals(fittedModel = m1, plot = F)
+DHARMa::plotQQunif(res)
+```
+
+---
+
+### 3. Normality 
+
+::: {style="font-size: 0.80em"}
+- Kolmogoroz-Smirnoff (KS) test is a formal test of whether residuals are significantly different from expectation under normal distribution
+  + [*P* > 0.05]{style="color:#0000FF"} = Model residuals are approximately normal 
+  + [*P* < 0.05]{style="color:#FF0000"} = Model residuals are significantly different from normal 
+:::
+
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: center
+#| fig-height: 5
+
+# Fitted model is stored in `m1`
+
+# Extract fitted and residual values 
+res <- DHARMa::simulateResiduals(fittedModel = m1, plot = F)
+DHARMa::plotQQunif(res)
+```
+
+---
+
+### 4. Equal variance 
+
+::: {style="font-size: 0.80em"}
+- The variation in responses are equal for each level in X
+  + Spread of `Y` values on the y-axis should be similar for all values/groups of `X` 
+  + Bold lines should fall along the dotted y = [0.25, 0.50, 0.75] lines 
+  
+:::
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: center
+
+# Fitted model is stored in `m1`
+
+# Extract fitted and residual values 
+res <- DHARMa::simulateResiduals(fittedModel = m1, plot = F)
+DHARMa::plotResiduals(res)
+```
+
+---
+
+# {.center}
+
+:::{#title-slide .center}
+::: {style="font-size: 2.5em"}
+Model inference 
+:::
+:::
+
+---
+
+### Model inference
+
+::: {.incremental}
+
+- We have confirmed that our statistical model was a good fit to the data, and we have even confirmed that `femurLength` was positively correlated with `bodyMass`.
+  + But, how do we know if this result is *statistically significant* and calculate *p-values*, and all the things reviewers (and supervisors want!)?
+  + Hint: We need to fit another model 
+  
+:::
+
+---
+
+### Null hypothesis significance testing (NHST)
+
+::: {.incremental}
+
+- Most model inference in ecology is based on *Null hypothesis significance testing (NHST)*
+  + The effect of a factor/covariate/predictor (e.g. `X` > `femurLength`) is evaluated against the hypothesis that there is no effect or relationship between the variable and `Y` (e.g. `bodyMass`)
+    + To assess this, we need:
+      1. A [Global model]{style="color:#FF0000"}, and
+      2. A [null model]{style="color:#0000FF"} 
+
+:::
+
+--- 
+
+## What is a global model? 
+
+::: {style="font-size: 0.85em"}
+- [Global model]{style="color:#FF0000"} represents the alternative hypothesis (H~1~)
+  + The alternative hypothesis is that there is evidence for a statistically significant effect/relationship of our predictor variable(s) (`femurLength`) on our response variable (`bodyMass`)
+  
+:::
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: "center"
+
+# Fit model
+mod_global <- glm(
+  data = df,
+  family = gaussian(link = "identity"),
+  bodyMass ~ 1 + femurLength
+)
+
+# Plot hypothetical relationship for null model
+nd <- data.frame(femurLength = seq(0, 30, 0.1))
+preds_global <- predict(mod_global, newdata = nd, type = "response") %>%
+  as.data.frame() %>%
+  dplyr::rename(
+    bodyMass = 1
+  ) %>%
+  dplyr::bind_cols(., nd)
+
+preds_global %>%
+  ggplot(data = ., aes(x = femurLength, y = bodyMass)) +
+  geom_line() +
+  scale_y_continuous(
+    limits = c(100, 200),
+    breaks = seq(100, 200, 20)
+  ) +
+   # Add axis labels 
+  labs(
+    x = "Femur length (mm)",
+    y = "Body mass (mg)"
+  ) 
+```
+
+---
+
+
+## What is a null model? 
+
+::: {style="font-size: 0.85em"}
+
+- [Null model]{style="color:#0000FF"} represents the null hypothesis (H~0~).
+  + The null hypothesis is that there is no evidence for a statistically significant effect/relationship of our predictor variable(s) (`femurLength`) on our response variable (`bodyMass`)
+
+:::
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: "center"
+
+# Fit model
+mod_null <- glm(
+  data = df,
+  family = gaussian(link = "identity"),
+  bodyMass ~ 1
+)
+
+# Plot hypothetical relationship for null model
+nd <- data.frame(femurLength = seq(0, 30, 0.1))
+preds_null <- predict(mod_null, newdata = nd, type = "response") %>%
+  as.data.frame() %>%
+  dplyr::rename(
+    bodyMass = 1
+  ) %>%
+  dplyr::bind_cols(., nd)
+
+preds_null %>%
+  ggplot(data = ., aes(x = femurLength, y = bodyMass)) +
+  geom_line() +
+  scale_y_continuous(
+    limits = c(100, 200),
+    breaks = seq(100, 200, 20)
+  ) +
+   # Add axis labels 
+  labs(
+    x = "Femur length (mm)",
+    y = "Body mass (mg)"
+  ) 
+```
+
+--- 
+
+## Null vs global model  
+
+::: {style="font-size: 0.85em"}
+
+1. [Global model (H~1~)]{style="color:#FF0000"}: There is a relationship between `femurLength` and `bodyMass`. 
+
+```{r}
+#| echo: true
+#| eval: true
+
+mod_global <- glm(
+  data = df,
+  family = gaussian(link = "identity"),
+  bodyMass ~ 1 + femurLength
+)
+```
+
+:::
+
+::: {style="font-size: 0.85em"}
+
+2. [Null model (H~0~)]{style="color:#0000FF"}: There is no statistical evidence for a relationship between `femurLength` and `bodyMass`. 
+
+```{r}
+#| echo: true
+#| eval: true
+
+mod_null <- glm(
+  data = df,
+  family = gaussian(link = "identity"),
+  bodyMass ~ 1
+)
+```
+
+:::
+
+---
+
+## Null vs global model  
+
+::: {style="font-size: 0.85em"}
+:::: {.columns}
+::: {.column width="50%"}
+
+
+1. [Null model (H~0~)]{style="color:#0000FF"}: There is no statistical evidence for a relationship between `femurLength` and `bodyMass`. 
+
+```{r}
+#| echo: true
+#| eval: true
+
+mod_null <- glm(
+  data = df,
+  family = gaussian(link = "identity"),
+  bodyMass ~ 1
+)
+```
+
+```{r}
+#| echo: false
+#| eval: true
+
+# Plot hypothetical relationship for null model
+nd <- data.frame(femurLength = seq(0, 30, 0.1))
+preds_null <- predict(mod_null, newdata = nd, type = "response") %>%
+  as.data.frame() %>%
+  dplyr::rename(
+    bodyMass = 1
+  ) %>%
+  dplyr::bind_cols(., nd)
+
+preds_null %>%
+  ggplot(data = ., aes(x = femurLength, y = bodyMass)) +
+  geom_line() +
+  scale_y_continuous(
+    limits = c(100, 200),
+    breaks = seq(100, 200, 20)
+  ) +
+   # Add axis labels 
+  labs(
+    x = "Femur length (mm)",
+    y = "Body mass (mg)"
+  ) 
+```
+
+:::
+
+::: {.column width="50%"}
+
+2. [Global model (H~1~)]{style="color:#FF0000"}: There is a statistically significant relationship between `femurLength` and `bodyMass`. 
+
+```{r}
+#| echo: true
+#| eval: true
+
+mod_global <- glm(
+  data = df,
+  family = gaussian(link = "identity"),
+  bodyMass ~ 1 + femurLength
+)
+```
+
+```{r}
+#| echo: false
+#| eval: true
+
+# Plot hypothetical relationship for null model
+nd <- data.frame(femurLength = seq(0, 30, 0.1))
+preds_global <- predict(mod_global, newdata = nd, type = "response") %>%
+  as.data.frame() %>%
+  dplyr::rename(
+    bodyMass = 1
+  ) %>%
+  dplyr::bind_cols(., nd)
+
+preds_global %>%
+  ggplot(data = ., aes(x = femurLength, y = bodyMass)) +
+  geom_line() +
+  scale_y_continuous(
+    limits = c(100, 200),
+    breaks = seq(100, 200, 20)
+  ) +
+  # Add axis labels 
+  labs(
+    x = "Femur length (mm)",
+    y = "Body mass (mg)"
+  ) 
+```
+
+:::
+::::
+:::
+
+---
+
+## Hypothesis testing 
+
+::: {.incremental}
+- Finally, we have to actually perform a hypothesis test
+  + Was the [global model (H~1~)]{style="color:#FF0000"} or the [null model (H~0~)]{style="color:#0000FF"} better supported by the data?
+  
+- To do this, we use the **Likelihood Ratio Test (LRT)**
+  + In `R`, we perform the LRT using the following code:
+  + `lmtest::lrtest(mod_null, mod_global)`
+  + Asks which model likely fits the data better (goodness-of-fit test)
+:::
+
+---
+
+## Likelihood Ratio Test (LRT)
+
+- This test gives us our test statistic (X2), degrees of freedom (df), and our sacred p-value. 
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Perform LRT
+lmtest::lrtest(
+  mod_null,
+  mod_global
+)
+```
+
+---
+
+## Reporting LRT 
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Perform LRT
+lmtest::lrtest(
+  mod_null,
+  mod_global
+)
+```
+
+::: {.incremental}
+::: {style="font-size: 0.65em"}
+- There is a statistically significant relationship between `femurLength` and `bodyMass` (X2 = 223.86, df = 1, *P* < 0.001).
+  + We know that one of the models was better than the other because the *P* < 0.05
+  + We then can tell that model 2 (`mod_global`) is the better model because it has a **higher** likelihood (`logLik = -305.47`) than model 1 (`mod_null`) (`logLik = -417.40`) 
+  
+:::
+:::
+
+---
+
+# {.center}
+
+:::{#title-slide .center}
+::: {style="font-size: 2.5em"}
+Plotting model predictions 
+(marginal effects)
+:::
+:::
+
+---
+
+## Marginal effects 
+
+Easiest way to present results is typically a *marginal effects plot*. 
+
+::: {.incremental}
+- Marginal effects show the relationship between our predictor(s) and response variable, holding all other predictors in the model constant or at a specified value 
+  + In this example, we only have 1 predictor, so the marginal effects plot simply shows the relationship between `femurLength` and `bodyMass`
+  
+:::
+
+---
+
+## Extracting marginal means 
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Extract expected relationship between X and Y
+preds <- ggeffects::ggeffect(
+  model = mod_global,
+  terms = c("femurLength [0:35 by = 0.5]"),
+  type = "fixed", 
+  interval = "confidence"
+  ) %>%
+  # Convert predictions into a data.frame
+  as.data.frame() %>% 
+  # Rename columns for easier plotting
+  dplyr::mutate(
+    femurLength = x
+  )
+```
+
+---
+
+## Plot marginal effect plot 
+
+::: {.panel-tabset}
+
+## Plot
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-align: center
+
+# Plot marginal effect plot 
+preds %>%
+  ggplot(data = ., aes(x = femurLength, y = predicted)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) + 
+  geom_line() +
+  geom_point(data = df, aes(x = femurLength, y = bodyMass), alpha = 0.5) +
+  scale_y_continuous(
+    limits = c(80, 220)
+  ) +
+   # Add axis labels 
+  labs(
+    x = "Femur length (mm)",
+    y = "Body mass (mg)"
+  ) 
+```
+
+## Code
+
+```{r}
+#| echo: true
+#| eval: false
+
+# Plot marginal effect plot 
+preds %>%
+  # Plot axes 
+  ggplot(data = ., aes(x = femurLength, y = predicted)) +
+  # Add 95% confidence interval bands 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) + 
+  # Add mean prediction line 
+  geom_line() +
+  # Add raw data points 
+  geom_point(data = df, aes(x = femurLength, y = bodyMass), alpha = 0.5) +
+  # Change y-axis limits to visualise curve better
+  scale_y_continuous(
+    limits = c(80, 220)
+  ) +
+   # Add axis labels 
+  labs(
+    x = "Femur length (mm)",
+    y = "Body mass (mg)"
+  ) 
+```
+
+:::
+
+---
+
+## Reporting your results 
+
+There was a statistically significant relationship between `femurLength` and `bodyMass` (X2 = 223.86, df = 1, *P* < 0.001). The beta-coefficient for this relationship was 2.97, indicating that for every 1mm increase in `femurLength`, `bodyMass` increases by 2.97mg, on average. (Insert your plot).  
+
+---

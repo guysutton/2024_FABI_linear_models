@@ -1,0 +1,874 @@
+---
+title: "01 - Designing ecological experiments"
+author: "Guy F. Sutton"
+institute: "Centre for Biological Control<br>Rhodes University, South Africa<Br>Email: g.sutton@ru.ac.za"
+format: 
+  revealjs:
+    # incremental: true
+    logo: images/cbc_logo_full.jpg
+    # footer: "`emitanaka.org/slides/toronto2022`"
+    slide-number: true
+editor: source
+---
+
+<br>
+<br>
+<br>
+
+::: {style="text-align: center"}
+"To consult the statistician after an experiment is finished is often merely to ask them to conduct a post mortem examination. <br> They can perhaps say what the experiment died of." 
+
+<br> 
+
+*Ronald A. Fisher* 
+:::
+
+---
+
+<!-- ##  What is an experiment?  -->
+
+<!-- ::: {.incremental} -->
+<!-- - Experiments are performed to assess the relationship between two or more variables. -->
+<!--   + We take measurements and then use statistical analyses to look for evidence of a relationship between the variables we measured.  -->
+
+<!-- - There are two primary experiment types we could use: -->
+<!--   + [Observational study]{style="color:#cc0000"} -->
+<!--   + [Experimental study]{style="color:#0000FF"} -->
+<!-- ::: -->
+
+<!-- --- -->
+
+<!-- ##  Observational studies  -->
+
+<!-- ::: {.incremental} -->
+<!-- + [Observational study]{style="color:#cc0000"}: We take measurements from samples without applying any treatment or trying to effect the subjects in anyway.  -->
+<!--   + No treatments are applied -->
+<!--   + There is no randomisation of subjects to different groups -->
+<!--   + Most researchers believe any inferences from observational studies to be weak -->
+<!-- ::: -->
+
+<!-- --- -->
+
+<!-- ##  Observational studies  -->
+
+<!-- ::: {.incremental} -->
+<!-- - For example, you are tasked with assessing Macadamia nut borer (MNB) densities from 20 farms across South Africa.  -->
+<!--     + At each farm, you place 10 traps, and back in the lab, you count the number of adults in each trap after leaving them out in the field for a week.  -->
+<!--     + You haven't manipulated any moths in the field. You simply collect them and observe what you find.  -->
+<!-- ::: -->
+
+<!-- ---  -->
+
+<!-- ##  Experimental studies  -->
+
+<!-- ::: {.incremental} -->
+<!-- + [Experimental study]{style="color:#0000FF"}: We take measurements from samples that have been randomly assisgned to different treatment groups.  -->
+<!--   + The random assignment of subjects to different groups is how we distinguish between and observational and experimental study -->
+<!--   + Most researchers believe any inferences from experimental studies to be strong -->
+<!-- ::: -->
+
+<!-- --- -->
+
+<!-- ## Experimental studies  -->
+
+<!-- ::: {.incremental} -->
+<!-- ::: {style="font-size: 0.85em"}  -->
+<!-- - For example, you are tasked with assessing Macadamia nut borer (MNB) densities from 20 farms across South Africa, and determine if pesticide application reduces moth densities . -->
+<!--   + At each farm, you randomly spray 5 orchards with pesticide and spray 5 orchards with water, and count the number of MNB individuals recorded in 5 traps placed in each orchard.  -->
+<!--   + You have manipulated orchards to either be sprayed with pesticide or not, and you have randomly assigned some orchards to receive the pesticide treatment and other orchards to receive the water spray treatment. -->
+<!-- ::: -->
+<!-- ::: -->
+
+<!-- --- -->
+
+## Basic Principles of Experimental Design 
+
+::: {.incremental}
+1. Randomisation
+2. Blocking 
+3. Confounding
+4. Replication
+
+:::
+
+---
+
+## 1. Randomisation
+
+::: {.incremental}
+- Inference and proper statistical analysis require that data/measurements are independent
+- True independence is (usually) impossible
+- We can do multiple things to maximise independence:
+  + 1. Take a random sample from the population 
+  + 2. Assign treatments randomly to the experimental units
+- Randomisation reduces bias and increases the estimation/accuracy of our treatment effect
+:::
+
+---
+
+## Randomisation example
+
+- Let's say we want to spray 10 plants with pesticide, and 10 plant with water, and then inoculate plants with MNB larvae and measure larval survival. 
+
+::: {.absolute top="35%" left="20%" width="800" height="500"}
+![](/images/figure_exp_design_10.png)
+:::
+
+---
+
+## Randomisation gone wrong
+
+::: {style="font-size: 0.75em"} 
+- If we randomly allocate 2 rows of 5 plants to receive the pesticide treatment, and the other 2 rows the water treatment. 
+  + Is this an appropriate experimental design? 
+:::
+
+::: {.absolute top="30%" left="10%" width="1000" height="700"}
+![](images/figure_exp_design_11.png)
+:::
+
+---
+
+## Randomisation gone wrong - bias
+
+::: {style="font-size: 0.65em"} 
+- Not a great experimental design 
+  + Allocation is not truly random
+  + Introduces bias into our results from the one block receiving more sun
+  + Overestimate the `pesticide` treatment effect, incorrectly. 
+:::
+
+::: {.absolute top="35%" left="10%" width="1000" height="600"}
+![](images/figure_exp_design_12.png)
+:::
+
+---
+
+## Completely randomised design (CRD)
+
+::: {style="font-size: 0.65em"} 
+- [Completely randomised design (CRD)]{style="color:#00FF00"} is the simplest experimental design. 
+  + Treatments are allocated completely randomly to the experimental units (more on this term later!). 
+  + Each unit must have an equal chance of receiving any treatment. 
+  + Only appropriate when units are homogeneous (consistent), so typically only used in the lab
+:::
+
+::: {.absolute top="40%" left="10%" width="800" height="400"}
+![](images/figure_exp_design_13.png)
+:::
+
+---
+
+## 2. Blocking
+
+::: {.incremental}
+- Blocking is used to include other factors in our experiment which contribute to undesirable variation.
+- Good experimental design is largely dependent on using '*blocks*' effectively to control for background variation and other factors that can introduce bias into our experiments and results. 
+:::
+
+---
+
+## Experimental error and blocking 
+
+::: {.incremental}
+- Blocking is used to control and account for [experimental error]{style="color:#FF0000"}:
+  + [Experimental error]{style="color:#FF0000"} refers to the variance between-blocks. 
+  + We are not specifically interested in the differences between-blocks, but, we must account for this variation before we estimate the effect of our treatments. 
+:::
+
+---
+
+## Experimental error example 
+
+::: {style="font-size: 0.85em"} 
+- For example, you could run a field trial on multiple farms (the 'block') to account for differences in environmental conditions between farms when looking at pesticide efficacy. 
+::: 
+
+::: {.absolute top="30%" left="10%" width="1000" height="600"}
+![](images/figure_exp_design_14.png)
+:::
+
+---
+
+## Experimental error example 
+
+::: {style="font-size: 0.55em"} 
+- By using blocks, we can control for biases that may occur due to differences between blocks, and as a way of accounting for background noise in the experiment
+  + Otherwise, we will be attributing any variation between blocks to variation caused by our treatments applied
+    + This often leads to **drastic** over/underestimation of the treatment effects 
+:::
+
+::: {.absolute top="33%" left="10%" width="1000" height="400"}
+![](images/figure_exp_design_15.png)
+:::
+
+---
+
+
+## Randomised complete block design (RCBD)
+
+::: {style="font-size: 0.65em"} 
+- [Randomised complete block design (RCBD)]{style="color:#00FFFF"} is probably the most popular experimental design. 
+  + Treatments are allocated completely randomly to the experimental units, as per CBD earlier.  
+  + Experimental units are grouped into blocks to minimise variability within blocks, and maximise variability between blocks. 
+  + This means that only the within-block variation contributes to experimental error. 
+  + With enough blocks (at least n = 5), allows us to make our results more generalisable. 
+  + Perfect for both lab and field-based studies
+:::
+
+---
+
+## 3. Confounding
+
+::: {.incremental}
+::: {style="font-size: 0.65em"} 
+- When running experiments, there may be factors that unknowingly bias our results, which we need to account for designing the experiment. 
+  + We just spoke about blocking above. Blocking is often done to control for confounding or unwanted background variation. 
+  + E.g. If we sample 20 orchards on a farm for MNB and compare trap counts between traps of different colours. Let's say that 10 orchards are found along a river, and the other 10 orchards are not along the river. 
+  + We would need to control for the potential effect of the river on trap counts, despite not necessarily being interested in this effect, before looking at the trap colour effect. 
+  + Allocate 5 orchards along the river one trap colour, and 5 orchards another trap colour.
+  + Even better, allocate multiple traps of each colour to each orchard 
+  + Do the same thing for the orchards not along the river 
+- These are called [nuisance variables]{style="color:#cc0000"}
+:::
+:::
+
+---
+
+## 4. Confounding
+
+::: {.incremental}
+- Another special case of confounding is ensuring that the experimental design is actually suitable (is not confounded itself)
+- To do this, we need to design appropriate [experimental controls]{style="color:#cc0000"}
+  + Controls help to evaluate whether there are aspects other than the treatment effect that may be influencing the experiment
+:::
+
+---
+
+## 4. Confounding
+
+::: {.incremental}
+- If we are trying to isolate novel bacteria from the gut of MNB by culturing swabs of gut contents on agar plates
+  + How do we confirm that our experimental design is appropriate? 
+:::
+
+---
+
+## 4. Confounding
+
+::: {.incremental}
+- Ideally, we want to design and implement two types of experimental controls:
+  + 1. [Negative control]{style="color:#cc0000"}: This is a treatment we apply that we expect no effect.
+    + This is what most people think of when talking about controls.
+    + Typically, negative controls are used to show we aren't getting contamination/spillover 
+:::
+
+---
+
+## 4. Confounding
+
+::: {.incremental}
+- Ideally, we want to design and implement two types of experimental controls:
+  + 2. [Positive control]{style="color:#008000"}: This is a treatment that we know produces a positive result.
+    + If a negative result is obtained, we know our experiment didn't work. 
+:::
+
+---
+
+## 4. Confounding
+
+If we are trying to isolate novel bacteria from the gut of MNB by culturing swabs of gut contents on agar plates
+
+::: {.incremental}
+- What is an appropriate [negative control]{style="color:#FF0000"}?
+  + Swab agar plates with loops that haven't been soaked in gut content solution (e.g. water loops)
+  + This confirms that any bacterium that grows on the agar plates comes from the gut content solution being swabbed, and not from contamination during the swabbing procedure
+:::
+
+---
+
+## 4. Confounding
+
+If we are trying to isolate novel bacteria from the gut of MNB by culturing swabs of gut contents on agar plates
+
+::: {.incremental}
+- What is an appropriate [positive control]{style="color:#008000"}?
+  + Swab agar plates with loops that have been soaked in a solution of a bacterium that is known to grow on the agar plates being used
+  + This confirms that our application of the treatment works
+:::
+  
+---
+
+## 4. Replication
+
+::: {.incremental}
+- Most scientists fully appreciate the need for replication 
+- The problem being is that there is often a mismatch between the scale of the replication and the treatments we apply
+  + We apply the replication at the wrong spatial or temporal scales
+  + More on this later ... 
+  
+- Replication allows us to distinguish between differences between the treatments we apply versus confounding variables / background noise
+:::
+
+---
+
+## 4. Replication
+
+::: {.incremental}
+1. *Estimation of experimental error*: We must be able to estimate and account for experimental error. 
+  
+2. *Experimetnal precision*: Replication ensures that we obtain precise estimates about the treatment effect from our study. 
+
+3. *Scope of inference*: Replication in space and/or time allows us to make our study more generalisable. 
+:::
+
+---
+
+## The Experimental Unit 
+
+This is the arguably most important facet to designing good experiments. 
+
+. . . 
+
+  + **Replication must be applied at the correct scale of the experiment!!!**
+
+::: {.incremental}
+::: {style="font-size: 0.90em"} 
+1. *Experimental unit*: The smallest unit or physical entity that can receive any treatment. 
+  + This is the entity the researcher wants to make inferences about
+2. *Sampling unit*: The physical entity from which the measurements/observations are taken. 
+:::
+:::
+
+---
+
+## The Experimental Unit 
+
+::: {.incremental}
+- For example, let's consider a study investigating the effect of pesticide application on MNB survival in the soil. 
+  + Two fish tanks are used, each filled with soil, and 20 MNB larvae placed in each tank. 
+  + One tank was sprayed with water (control) and the other tank sprayed with a herbicide solution (treatment).
+  + The measurement we take is whether each MNB larvae pupated or not. 
+:::
+
+---
+
+## The Experimental Unit 
+
+::: {.absolute top="10%" left="0" width="1031" height="529"}
+![](images/figure_exp_design_1.png)
+:::
+
+. . .
+
+::: {.absolute top="75%" left="55%"}
+::: {style="color: #cc0000"}
+It must be possible for any sampling unit to receive [ANY]{style="color:#cc0000"} treatment
+:::
+:::
+
+---
+
+## The Experimental Unit 
+
+::: {.absolute top="10%" left="0" width="1031" height="529"}
+![](images/figure_exp_design_1.png)
+:::
+
+. . .
+
+::: {.absolute top="75%" left="55%"}
+::: {style="color: #3D9A50"}
+Experimental unit = the tank <br> (need both tanks to apply all treatments)
+:::
+:::
+
+---
+
+## The Experimental Unit 
+
+::: {.absolute top="10%" left="0" width="1031" height="529"}
+![](images/figure_exp_design_1.png)
+:::
+
+. . .
+
+::: {.absolute top="75%" left="55%"}
+::: {style="color: #66b2ff"}
+Sampling unit = Each larvae
+:::
+:::
+
+---
+
+## The Experimental Unit - Round 2
+
+What about if we filled 500ml cups with soil and placed individual MNB larvae into each cup? 
+
+::: {.absolute top="25%" left="0" width="800" height="500"}
+![](images/figure_exp_design_2.png)
+:::
+
+. . .
+
+::: {.absolute top="40%" left="45%"}
+::: {style="color: #cc0000"}
+Experimental unit:
+:::
+:::
+
+. . .
+
+::: {.absolute top="40%" left="75%"}
+::: {style="color: #cc0000"}
+cup
+:::
+:::
+
+. . .
+
+::: {.absolute top="50%" left="45%"}
+::: {style="color: #66b2ff"}
+Sampling unit:
+:::
+:::
+
+. . .
+
+::: {.absolute top="50%" left="75%"}
+::: {style="color: #66b2ff"}
+also the cup!!! 
+:::
+:::
+
+---
+
+## Experimental units = sample size 
+
+:::{.incremental}
+- One of the most common mistakes I see is researchers equating 'number of samples = no. of sampling units'
+  + [Number of sample units usually DOES NOT equal sample size]{style="color:#cc0000"}
+  + [Number of complete experimental units EQUALS sample size!!!]{style="color:#cc0000"}
+  + i.e. Sample size = number of times we are able to apply our full set of treatments
+
+- As such, we need to replicate the experiment based on experimental units, not sample units. 
+:::
+
+---
+
+## Sample size - Example 1
+
+::: {.absolute top="10%" left="0" width="800" height="500"}
+![](images/figure_exp_design_1.png)
+:::
+
+. . .
+
+. . .
+
+::: {.absolute top="60%" left="35%"}
+::: {style="color: #cc0000"}
+No. of experimental units:
+:::
+:::
+
+. . .
+
+::: {.absolute top="60%" left="78%"}
+::: {style="color: #cc0000"}
+1
+:::
+:::
+
+. . .
+
+::: {.absolute top="70%" left="35%"}
+::: {style="color: #66b2ff"}
+No. of sampling units: 
+:::
+:::
+
+. . .
+
+::: {.absolute top="70%" left="70%"}
+::: {style="color: #66b2ff"}
+40 (20 per treatment)
+:::
+:::
+
+---
+
+---
+
+## Sample size - Example 2
+
+::: {.absolute top="10%" left="0" width="800" height="500"}
+![](images/figure_exp_design_2.png)
+:::
+
+. . .
+
+. . .
+
+::: {.absolute top="25%" left="45%"}
+::: {style="color: #cc0000"}
+No. of experimental units:
+:::
+:::
+
+. . .
+
+::: {.absolute top="25%" left="87%"}
+::: {style="color: #cc0000"}
+10
+:::
+:::
+
+. . .
+
+::: {.absolute top="35%" left="45%"}
+::: {style="color: #66b2ff"}
+No. of sampling units: 
+:::
+:::
+
+. . .
+
+::: {.absolute top="35%" left="80%"}
+::: {style="color: #66b2ff"}
+20 <br>(10 per treatment)
+:::
+:::
+
+---
+
+## An example 
+
+- Let's consider a field study to assess 5 different traps for MNB abundance estimates. 
+  + We have 5 farms to perform the study, and 5 orchards at each farm. 
+
+. . . 
+
+![](./images/mermaid_02.jpg){.absolute top=400 left=100}
+
+```{mermaid}
+%%| fig-width: 8
+%%| fig-height: 4
+%%| echo: false
+%%| eval: false
+
+flowchart TB
+
+    subgraph "Farm"
+    a["Farm (n = 5)"] 
+    end
+
+
+    subgraph "Orchard"
+
+    a --> O1[Orchard 1]
+    a --> O2[Orchard 2]
+    a --> O3[Orchard 3]
+    a --> O4[Orchard 4]
+    a --> O5[Orchard 5]
+
+    end
+
+    subgraph "Treatment"
+
+    subgraph "Exp Unit 1"
+    O1 --> Trap11[Trap1]
+    O1 --> Trap12[Trap2]
+    O1 --> Trap13[Trap3]
+    O1 --> Trap14[Trap4]
+    O1 --> Trap15[Trap5]
+    end
+
+    subgraph "Exp Unit 2"
+    O2 --> Trap21[Trap1]
+    O2 --> Trap22[Trap2]
+    O2 --> Trap23[Trap3]
+    O2 --> Trap24[Trap4]
+    O2 --> Trap25[Trap5]
+    end
+    end
+
+style Orchard fill:#f9f
+style Treatment fill:#a9a
+```
+
+---
+
+## A bad experimental design
+
+::: {.incremental}
+::: {style="font-size: 0.75em"}
+- We put all 5 reps for each trap colour in their own orchard. 
+:::
+:::
+
+. . . 
+
+![](./images/mermaid_03.jpg){.absolute top=150 left=50 width="1000" height="300"}
+
+```{mermaid}
+%%| fig-width: 8
+%%| fig-height: 4
+%%| echo: false
+%%| eval: false
+
+flowchart TB
+
+    subgraph "Farm"
+    a["Farm (n = 5)"] 
+    end
+
+
+    subgraph "Experimental Unit (all treatments applied)"
+
+    a --> O1[Orchard 2]
+    a --> O2[Orchard 1]
+    a --> O3[Orchard 3]
+    a --> O4[Orchard 4]
+    a --> O5[Orchard 5]
+
+    end
+
+    subgraph "Sample Unit 2"
+    O1 --> Trap11[Trap1]
+    O1 --> Trap12[Trap1]
+    O1 --> Trap13[Trap1]
+    O1 --> Trap14[Trap1]
+    O1 --> Trap15[Trap1]
+    end
+
+    subgraph "Sample Unit 1"
+    O2 --> Trap21[Trap2]
+    O2 --> Trap22[Trap2]
+    O2 --> Trap23[Trap2]
+    O2 --> Trap24[Trap2]
+    O2 --> Trap25[Trap2]
+    end
+```
+
+. . . 
+
+<br>
+<br>
+<br>
+<br>
+<br>
+
+::: {.incremental}
+::: {style="font-size: 0.75em"}
+  + Experimental unit: All 5 orchards combined (farm = 1 rep)
+  + Sampling unit: Individual trap
+  + Sub-sample: Individual trap 
+:::
+:::
+
+---
+
+## A better experimental design
+
+::: {.incremental}
+::: {style="font-size: 0.75em"}
+- We put 1 rep of each trap type in each orchard 
+:::
+:::
+
+. . . 
+
+![](./images/mermaid_04.jpg){.absolute top=150 left=50 width="1000" height="300"}
+
+```{mermaid}
+%%| fig-width: 8
+%%| fig-height: 4
+%%| echo: false
+%%| eval: false
+%%| 
+flowchart TB
+
+    subgraph "Farm"
+    a["Farm (n = 5)"] 
+    end
+
+
+    subgraph "Orchards"
+
+    subgraph "Experimental Unit 2 (all treatments applied)"
+    a --> O1[Orchard 2]
+    end 
+
+    subgraph "Experimental Unit 1 (all treatments applied)"
+    a --> O2[Orchard 1]
+    end
+
+    a --> O3[Orchard 3]
+    a --> O4[Orchard 4]
+    a --> O5[Orchard 5]
+
+    end
+
+    subgraph "Sample Unit 2"
+    O1 --> Trap11[Trap1]
+    O1 --> Trap12[Trap2]
+    O1 --> Trap13[Trap3]
+    O1 --> Trap14[Trap4]
+    O1 --> Trap15[Trap5]
+    end
+
+    subgraph "Sample Unit 1"
+    O2 --> Trap21[Trap1]
+    O2 --> Trap22[Trap2]
+    O2 --> Trap23[Trap3]
+    O2 --> Trap24[Trap4]
+    O2 --> Trap25[Trap5]
+    end
+
+```
+
+. . . 
+
+<br>
+<br>
+<br>
+<br>
+<br>
+
+::: {.incremental}
+::: {style="font-size: 0.75em"}
+  + Experimental unit: Individual orchard (farm = 5 reps)
+  + Sampling unit: Individual trap
+  + Sub-sample: None
+:::
+:::
+
+---
+
+## Test your skills
+
+::: {.incremental}
+::: {style="font-size: 0.85em"} 
+- Let's assume you want to run an experiment investigating the effect of 2 new artificial diets that have been developed on MNB survival to improve rearing conditions in the lab. 
+  + You want to know which `diet` MNB should be reared under to maximize the number of adults that emerge after 25 days. 
+:::
+:::
+
+---
+
+## Test your skills
+
+::: {.incremental}
+::: {style="font-size: 0.85em"} 
+- You want to know which `diet` MNB should be reared under to maximize the number of adults that emerge after 25 days
+
+- Rough experimental design: 
+  + Larvae are reared in small jars, with 10 larvae placed in each jar 
+  + You have 2 `diet` treatments (`diet1`, `diet2`)
+  + You place these jars into a constant environment room 
+  + Your response variable is the cumulative number of adults that have emerged on day25. 
+  + Let's assume that we decide to use 10 jars per diet treatment 
+:::
+:::
+
+---
+
+## Controls 
+
+::: {.incremental}
+::: {style="font-size: 0.75em"} 
+- How many jars do we need?
+  + At least 30, if not 40. 
+    + Positive control: 10 jars of the diet currently used to rear MNB. This is the baseline to confirm that the new diet work better, worse, or comparably to the current diet used. 
+    + Negative control: 10 jars with no diet 
+      + Why? 
+          + What if all the diets produce comparable numbers after day 25? 
+          + Negative control confirms whether the diets worked at all (i.e. the larvae actually fed on the diets)
+          + If diet treatments were comparable to negative control, the experiment didn't work
+:::          
+:::
+
+---
+
+## Defining experimental units 
+
+If we put 10 jars x 3 diet treatments into the CE room
+
+![](./images/mermaid_exp_unit_diet2.jpeg){.absolute top="20%" left="10%" width="1000" height="300"}
+
+. . . 
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+::: {.incremental}
+::: {style="font-size: 0.60em"}
+- What is the experimental unit? 
+  + 1 complete set of diet treatment jars 
+    + 1 jar of `Diet1` (10 larvae)
+    + 1 jar of `Diet2` (10 larvae)
+    + 1 jar of `DietControl` (10 larvae )
+      + Therefore: 3 jars, 30 larvae = 1 experimental unit 
+:::
+:::
+
+---
+
+## Defining sampling units 
+
+If we put 10 jars x 3 diet treatments into the CE room
+
+![](./images/mermaid_exp_unit_diet2.jpeg){.absolute top="20%" left="10%" width="1000" height="300"}
+
+. . . 
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+::: {.incremental}
+::: {style="font-size: 0.60em"}
+- What is the sampling unit? 
+  + 1 jar = 1 sample unit
+    + Our response variable is the cumulative number of MNB adults that emerged which is measured at the level of the individual jar 
+:::
+:::
+
+---
+
+## Defining sub-sampling units 
+
+If we put 10 jars x 3 diet treatments into the CE room
+
+![](./images/mermaid_exp_unit_diet2.jpeg){.absolute top="20%" left="10%" width="1000" height="300"}
+
+. . . 
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+::: {.incremental}
+::: {style="font-size: 0.60em"}
+- Is there/what is the sub-sample unit? 
+  + There isn't a sub-sample in this experimental design
+    + We are taking the measurements at the individual jar level (cumulative number of MNB adults that emerged per jar)
+    + We aren't taking measurements at the larval level, which if we did, would mean that larvae = sub-sample
+:::
+:::
+
+
+
+
+

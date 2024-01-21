@@ -1,0 +1,604 @@
+---
+title: "04 - Logistic models"
+author: "Guy F. Sutton"
+institute: "Centre for Biological Control<br>Rhodes University, South Africa<Br>Email: g.sutton@ru.ac.za"
+format: 
+  revealjs:
+    # incremental: true
+    logo: images/cbc_logo_full.jpg
+    # footer: "`emitanaka.org/slides/toronto2022`"
+    slide-number: true
+editor: source
+---
+
+## Binary/Proportion data 
+
+```{r}
+#| echo: false
+#| eval: true
+
+################
+# Session setup 
+################
+
+# Use package manager to check, install and load required packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(
+  # List the packages you need below
+  tidyverse,
+  glmmTMB,
+  DHARMa
+)
+
+# Change ggplot theme
+theme_set(
+  theme_classic() +
+    theme(
+      panel.border = element_rect(colour = "black",
+                                  fill = NA),
+      axis.text = element_text(colour = "black"),
+      axis.title.x = element_text(margin = unit(c(2, 0, 0, 0),
+                                                "mm")),
+      axis.title.y = element_text(margin = unit(c(0, 4, 0, 0),
+                                                "mm")),
+      legend.position = "none"
+    )
+)
+```
+
+::: {.incremental}
+::: {style="font-size: 0.75em"}
+- Another set of common data types in ecology and agriculture are binomial and proportion data
+  + Binomial data: There are only two categorical levels (e.g. dead/alive, present/absent, infected/healthy)
+  + Proportion data: Any data in the range of [0,1] (e.g. Proportion of insects that survived or emerged)
+
+- The Gaussian and Poisson/NB GLM analyses are completely in appropriate for analysing these data
+:::
+:::
+
+---
+  
+## An example 
+
+- Let's consider a study looking at fruit fly mortality rates (`mortality`) when exposed to a cold treatment for 18 days (`exposure_days`. 
+
+```{r data_import}
+#| echo: false
+#| eval: true 
+#| fig-align: center
+
+# Import data
+data <- readxl::read_excel(here::here("./data/Experiment1raw.xlsx")) %>%
+  janitor::clean_names() %>%
+  # Calculate mortality per dish 
+  dplyr::group_by(exposure_days, species, replicate, dish_number) %>%
+  dplyr::mutate(
+    mortality = sum(status_dead) / max(larva_number)
+  ) %>%
+  dplyr::filter(species == "C.capitata")
+
+# Does corrected mortality vary between diet treatments over time? 
+data %>%
+  # Calculate average and standard deviation (sd) mortality over the 4 replicates 
+  dplyr::group_by(exposure_days) %>%
+  dplyr::summarise(
+    mean_mortality = mean(mortality, na.rm = T),
+    sd_mortality = sd(mortality, na.rm = T)
+  ) %>%
+  ggplot(data = ., aes(x = exposure_days,
+                       y = mean_mortality)) +
+  geom_point() +
+  geom_line() +
+  scale_y_continuous(breaks = seq(0, 1, 0.2),
+                     limits = c(0, 1)) + 
+  theme(legend.position = "right") +
+  # Clean axis and legend labels 
+  labs(
+    x = "Exposure days",
+    y = "Mean fruit fly mortality"
+  ) +
+  scale_x_continuous(breaks = seq(0, 18, 1))
+
+```
+
+---
+
+## Gaussian GLM 
+
+::: {.panel-tabset}
+
+### Prediction 
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-width: 8
+#| fig-height: 5
+#| fig-align: center
+
+# Fit Gaussian GLM model
+mod1 <-
+  glm(mortality ~ exposure_days,
+      data = data,
+      family = gaussian(link = "identity"))
+
+# Extract predictions 
+preds <-
+  ggeffects::ggpredict(
+    mod1,
+    terms = c("exposure_days"),
+    type = "fe",
+    interval = "confidence"
+  ) %>%
+  as.data.frame() %>%
+  dplyr::rename(exposure_days = x)
+
+# Make plot 
+preds %>%
+  ggplot(data = ., aes(x = exposure_days, y = predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.2) +
+  geom_point(data = data, 
+             aes(x = exposure_days, y = mortality), 
+             size = 1.5) +
+  labs(
+    x = "Exposure days to cold treatment",
+    y = "Proportion of flies that died"
+  )
+```
+
+### Code 
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-width: 8
+#| fig-height: 5
+#| fig-align: center
+
+# Fit Gaussian GLM model
+mod1 <-
+  glm(mortality ~ exposure_days,
+      data = data,
+      family = gaussian(link = "identity"))
+
+# Extract predictions 
+preds <-
+  ggeffects::ggpredict(
+    mod1,
+    terms = c("exposure_days"),
+    type = "fe",
+    interval = "confidence"
+    # interval = "prediction"
+  ) %>%
+  as.data.frame() %>%
+  dplyr::rename(exposure_days = x)
+
+# Make plot 
+preds %>%
+  ggplot(data = ., aes(x = exposure_days, y = predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.2) +
+  geom_point(data = data, 
+             aes(x = exposure_days, y = mortality), 
+             size = 1.5) +
+  labs(
+    x = "Exposure days to cold treatment",
+    y = "Proportion of flies that died"
+  )
+```
+
+:::
+
+---
+
+## Issues with Gaussian GLM 
+
+::: {.incremental}
+::: {style="font-size: 0.70em"}
+- What are some obvious issues with the Gaussian GLM? 
+  + It makes predictions outside the [0,1] interval 
+    + That doesn't make sense, 1 represents all flies dying and 0 represents no flies dying!!! 
+  + There clearly isn't a linear relationship (and there is eivdence for unequal variances!)
+:::
+:::
+  
+---
+
+## Modelling binomial data in `R`
+
+::: {.incremental}
+- There are two basics options for modelling binary/proportion data:
+  1. *Logistic GLM*: This is the default parameterisation in almost every field, except agriculture and toxicology, apparently
+  2. *Probit GLM*: This seems to be much more popular in agriculture. 
+:::
+
+--- 
+
+## Logit vs probit GLM 
+
+::: {.incremental}
+::: {style="font-size: 0.80em"}
+- Different mathematical formula for calculating the curves 
+  + The results are usually qualitatively similar, very small differences in predictions 
+:::
+:::
+
+. . . 
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-width: 8
+#| fig-height: 4
+#| fig-align: center
+#| 
+model.results2 = glm(data = data, mortality ~ exposure_days, 
+                    family = binomial(link="probit"))
+preddat = data.frame(exposure_days = seq(0, 18, 1))
+preddat$pred = predict(model.results2, newdata = preddat, type = "response")
+preddat$pred2 = plogis(predict(model.results2, newdata = preddat))
+ggplot(data, aes(exposure_days, mortality) ) +
+     geom_line(data = preddat, aes(y = pred, color = "Probit GLM")) +
+     geom_line(data = preddat, aes(y = pred2, color = "Logit GLM" )) +
+  labs(x = "Exposure days",
+       y = "Proportion of flies that died",
+       colour = "Model") +
+  theme(legend.position = "right")
+```
+
+---
+
+## Model syntax 
+
+::: {.incremental}
+::: {style="font-size: 0.85em"}
+- Assuming our question is: *Does exposure time to cold treatment effect fly mortality?* 
+
+1. *Logistic GLM*:
+
+ + `mod_logistic <- glm(mortality ~ exposure_days, family = binomial(link = "logit"), data = data)` 
+
+2. *Probit GLM*:
+
+  + `mod_probit <- glm(mortality ~ exposure_days, family = binomial(link = "probit"), data = data)` 
+:::
+:::
+
+--- 
+
+
+## Alternative syntax 
+
+::: {.incremental}
+::: {style="font-size: 0.85em"}
+- When our data is the number of units that passed or failed (`X`) out of `n` units, we specify the model using `X/n` notation 
+
+1. *Logistic GLM*:
+
+ + `mod_logistic <- glm(cbind(X, n - X) ~ exposure_days, family = binomial(link = "logit"), data = data)` 
+
+2. *Probit GLM*:
+
+  + `mod_probit <- glm(cbind(X, n - X) ~ exposure_days, family = binomial(link = "probit"), data = data)` 
+:::
+:::
+
+---
+
+## Fit the probit GLM 
+
+::: {style="font-size: 0.80em"}
+```{r}
+#| echo: true
+#| eval: true
+
+mod_probit <-
+  glm(mortality ~ 1 + exposure_days,
+      family = binomial(link = "probit"),
+      data = data)
+summary(mod_probit)
+```
+:::
+
+---
+
+## Interpretation 
+
+::: {.incremental}
+::: {style="font-size: 1.0em"}
+- The interpretation of probit GLM co-efficients is very close to being uninterpretable. 
+  + The coefficients represent differences in *z-scores* between treatment groups... What on earth is that? 
+  + Let's not worry...
+  + Instead, let's fit the more commonly used logistic model 
+:::
+:::
+
+
+---
+
+## Fit the logit GLM 
+
+::: {style="font-size: 0.80em"}
+```{r}
+#| echo: true
+#| eval: true
+
+m_logit <-
+  glm(data = data,
+      family = binomial(link = "logit"),
+      mortality ~ 1 + exposure_days)
+summary(m_logit)
+```
+:::
+
+---
+
+
+### Plot logit prediction
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-width: 8
+#| fig-height: 6
+#| fig-align: center
+
+preds <- ggeffects::ggeffect(
+  model = m_logit,
+  terms = c("exposure_days [0:18 by = 0.1]"),
+  interval = "confidence",
+  type = "fixed"
+  ) %>%
+  as.data.frame()
+
+preds %>% 
+  ggplot(data = ., aes(x = x, y = predicted)) +
+  geom_line(colour = "red", linetype = "dashed") +
+  labs(
+    x = "Exposure time (days)",
+    y = "Proportion of flies that died"
+  ) +
+  geom_point(data = data, aes(x = exposure_days, y = mortality))
+```
+
+---
+
+### Likelihood Ratio Test 
+
+Test the hypothesis of a `exposure_time` effect on the fly `mortality`
+
+```{r}
+#| echo: true
+#| eval: false
+
+# Fit null model 
+m_null <- glm(
+  data = data,
+  family = binomial(link = "logit"),
+  mortality ~ 1
+)
+
+# Perform LRT 
+lmtest::lrtest(m_null, m_logit)
+```
+
+---
+
+
+### Likelihood Ratio Test 
+
+Test the hypothesis of a `exposure_time` effect on the fly `mortality`
+
+```{r}
+#| echo: false
+#| eval: true
+
+# Fit null model 
+m_null <- glm(
+  data = data,
+  family = binomial(link = "logit"),
+  mortality ~ 1
+)
+
+# Perform LRT 
+lmtest::lrtest(m_null, m_logit)
+```
+
+There is support for a statistically significant relationship between `exposure_time` and fly `mortality` (proportion of flies that died) (X2 = 15794, df = 1, *P* < 0.001). 
+
+---
+
+### Interpret coefficients 
+
+::: {style="font-size: 0.75em"}
+
+```{r}
+#| echo: false
+#| eval: true
+
+summary(m_logit)
+```
+
+
+::: {.incremental}
+
+- (Intercept) = -3.75394
+  + Always have to exponentiate (`exp(value)`) to get interpretable coefficients
+  + `exp(-3.75394)` = 0.02
+  + The expected `mortality` when `exposure_days` = 0 is 0.02. 
+  
+:::
+
+:::
+
+---
+
+### Interpret coefficients 
+
+::: {style="font-size: 0.75em"}
+
+```{r}
+#| echo: false
+#| eval: true
+
+summary(m_logit)
+```
+
+::: {.incremental}
+
+- Beta `exposure_days` = 1.998
+  + Always have to exponentiate (`exp(value)`) to get interpretable coefficients
+  + `exp(0.93153)` = 2.53
+  + The proportion of fly `mortality` recorded increases by a factor of 2.53 for each additional day of exposure to cold treatment, on average
+  
+:::
+
+:::
+
+---
+
+### Calculating LC values 
+  
+  
+To find lethal concentration values (e.g. LC50, LC90, LC99 and LC999986), we can use the `MASS::dose_p` function. 
+
+```{r}
+#| echo: true
+#| eval: true 
+#| warning: false
+#| message: false
+
+lc_res <- MASS::dose.p(m_logit,
+                       p = c(0.5, 0.9, 0.99, 0.999986))
+lc_res
+```
+
+---
+
+### Calculating confidence intervals around LC
+  
+```{r}
+#| echo: true
+#| eval: true 
+#| warning: false
+#| message: false
+
+# Plug in the LC values you want using `p` argument in `dose_p`
+# p = 0.50 = LC50, for example 
+xp <- MASS::dose.p(m_logit, p = c(0.50, 0.90, 0.99, 0.999986))
+xp.ci <- xp + attr(xp, "SE") %*% matrix(qnorm(1-0.05/2)*c(-1,1), nrow = 1)
+zp.est <- cbind(xp, attr(xp, "SE"), xp.ci[,1], xp.ci[,2])
+dimnames(zp.est)[[2]] <- c("LD", "SE", "LCL", "UCL")
+zp.est
+```
+
+---
+
+### Comparing LC between two treatments 
+
+```{r}
+data <- data %>%
+  # Calculate average
+  dplyr::group_by(exposure_days) %>%
+  dplyr::summarise(
+    mortality = mean(mortality, na.rm = T)
+  ) %>%
+  dplyr::mutate(
+    species = "Species #1"
+  )
+
+data2 <- data %>%
+  # Calculate average
+  dplyr::group_by(exposure_days) %>%
+  dplyr::summarise(
+    mortality = mean(mortality, na.rm = T)
+  ) %>%
+  dplyr::mutate(
+    mortality = mortality * 0.7,
+    species = "Species #2"
+  )
+
+# Combine data 
+data <- dplyr::bind_rows(
+  data, 
+  data2
+)
+```
+
+```{r}
+data %>%
+  ggplot(data = ., aes(x = exposure_days,
+                       y = mortality,
+                       colour = species)) +
+  geom_point() +
+  geom_line() +
+  scale_y_continuous(breaks = seq(0, 1, 0.2),
+                     limits = c(0, 1)) + 
+  theme(legend.position = "right") +
+  # Clean axis and legend labels 
+  labs(
+    x = "Exposure days",
+    y = "Mean fruit fly mortality",
+    colour = "Species"
+  ) +
+  scale_x_continuous(breaks = seq(0, 18, 1))
+```
+
+---
+
+### Fit seperate logit GLM per treatment group 
+
+Fit a logit GLM to the data for `species #1`
+
+```{r}
+#| echo: true
+#| eval: true
+
+m_sp1 <-
+  glm(data = data,
+      family = binomial(link = "logit"),
+      subset = c(species == "Species #1"), 
+      mortality ~ 1 + exposure_days)
+```
+
+---
+
+### Fit seperate logit GLM per treatment group 
+
+Fit a logit GLM to the data for `species #2`
+
+```{r}
+#| echo: true
+#| eval: true
+
+m_sp2 <-
+  glm(data = data,
+      family = binomial(link = "logit"),
+      subset = c(species == "Species #2"), 
+      mortality ~ 1 + exposure_days)
+```
+
+---
+
+### Lethal ratio test 
+
+The ratio test is taken from Wheeler et al. (2006). The test compares LC values from two different probit models. Below, we will compare LC50 between species #1 and species #2
+
+```{r}
+#| echo: true
+#| eval: true
+
+ratios <- ecotox::ratio_test(
+  model_1 = m_sp1,
+  model_2 = m_sp2,
+  type = "logit", 
+  percentage = 50,
+  log_x = FALSE)
+print(ratios)
+```
+
+There is no evidence for a statistically significantly difference in LC50 between species #1 and species #2 (*z* = 1.44, *P* = 0.15). 
+
