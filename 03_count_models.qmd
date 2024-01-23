@@ -226,6 +226,7 @@ cowplot::plot_grid(
   + I have simulated the data so that:
     + The expected `no_larvae` when `tree_diam` = 0 is 2.71 larvae. Obviously nonsense, but keep this value in mind for later. 
     + The `no_larvae` recorded increases by a factor of 7 per 1cm increase in `tree_diam` 
+    
 :::
 :::
 
@@ -452,7 +453,6 @@ summary(m_p)
 
 
 ::: {.incremental}
-
 - Beta `tree_diam` = 1.998
   + Always have to exponentiate (`exp(value)`) to get interpretable coefficients
   + `exp(1.998)` = 7.31
@@ -463,7 +463,7 @@ summary(m_p)
 
 ---
 
-## Extracting marginal means 
+### Extracting marginal means 
 
 ```{r}
 #| echo: true
