@@ -1,4 +1,4 @@
-# Exercise: Fit logit models to compare insect survival on three 
+# Exercise: Fit probit models to compare insect survival on three 
 # different diet treatments, and calculate LC50, LC90 and LC99 dose responses 
 
 ###########################################################################
@@ -84,10 +84,11 @@ data %>%
 #   - Does the proportion of insects that died vary with temperature and the diet treatment? 
 mod1 <- glm(cbind(no_dead, no_exposed - no_dead) ~
               # What variables could explain the response variable?
-              diet + temperature,
+              1 + diet + temperature,
             data = data,
             # Let's fit a probit link function
-            family = binomial(link = "probit"))
+            family = binomial(link = "probit")
+)
 
 # Check model fit 
 DHARMa::simulateResiduals(fittedModel = mod1, plot = T)
@@ -121,10 +122,11 @@ car::Anova(
 #     - Model #2 allows the effect of temperature to vary between the three diets. 
 mod2 <- glm(cbind(no_dead, no_exposed - no_dead) ~
               # What variables could explain the response variable?
-              diet * temperature,
+              1 + diet + temperature + diet:temperature,
             data = data,
             # Let's fit a probit link function
-            family = binomial(link = "probit"))
+            family = binomial(link = "probit")
+)
 
 # Check model fit 
 DHARMa::simulateResiduals(fittedModel = mod2, plot = T)
@@ -149,19 +151,6 @@ car::Anova(
 #       mediates the effect of temperature on insect survival. Very cool!!! 
 # - NOTE: YOU DO NOT REPORT THE SINGULAR EFFECTS OF DIET AND TREATMENT WHEN THE INTERACTION TERM 
 #         IS SIGNIFICANT!!! 
-
-
-##########
-# Test whether model #2 was a better fit than model #1? 
-########## 
-
-# AICc balances model complexity vs model accuracy, whereby the model with the lowest AICc
-# is the best fitting model
-MuMIn::AICc(mod1)
-MuMIn::AICc(mod2)
-
-# Model #2 was clearly a better fit (AICc = 79) than model #1 (AICc = 92). 
-# - This is just a nice check that we are doing model inference on the best model. 
 
 ###########################################################################
 # Plot model predictions --------------------------------------------------
@@ -235,7 +224,7 @@ preds %>%
 
 # Refit high diet probit GLM 
 mod_high <- glm(cbind(no_dead, no_exposed - no_dead) ~
-              temperature,
+              1 + temperature,
             data = data,
             # Note we subset the data like this
             subset = c(diet == "High"),
